@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/groq": "^0.0.63",
     "@emotion/is-prop-valid": "latest",
     "@neondatabase/serverless": "^0.10.1",
     "@radix-ui/react-accordion": "latest",
