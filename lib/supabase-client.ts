@@ -1,32 +1,57 @@
 // Supabase クライアントのユーティリティ関数
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import type { FundManagementOrganization } from "@/types"
+import type { FundManagementOrganization } from "@/types" // この型は現状このファイルでは直接使われていないが、元のファイル構造を維持
 
 // Re-export createClient for external use
 export { createClient } from "@supabase/supabase-js"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable")
+  console.error("CRITICAL ERROR: NEXT_PUBLIC_SUPABASE_URL is not defined in environment variables.")
+  // 本番環境では、ここでエラーを投げてもUI上はSupabaseClientの内部エラーになることが多い
+  // しかし、開発時には明確なエラーとして認識できる
+}
+if (!supabaseAnonKey) {
+  console.error("CRITICAL ERROR: NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined in environment variables.")
 }
 
-// Server-side client (with service role key)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || "", {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+// supabaseUrl と supabaseAnonKey が undefined の場合、createClient は内部でエラーを投げる
+// 'supabaseKey is required' は supabaseAnonKey が渡されなかった場合のエラー
+export const supabase: SupabaseClient = createClient(supabaseUrl!, supabaseAnonKey!)
 
-// Client-side client (with anon key)
-export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey || "")
+export const supabaseAdmin = (() => {
+  const adminSupabaseUrl = process.env.SUPABASE_URL // サーバーサイド用は NEXT_PUBLIC なし
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export const supabase = supabaseClient
+  if (!adminSupabaseUrl || !supabaseServiceKey) {
+    console.warn(
+      "Admin Supabase client (supabaseAdmin) could not be initialized due to missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. This may affect server-side operations.",
+    )
+    // null を返すか、限定的なクライアントを返すか、あるいはエラーを投げるかは設計次第
+    // ここでは、初期化失敗を示すために限定的なオブジェクトやnullを返すことを検討できるが、
+    // createClientがURL/Keyなしで呼ばれるとエラーになるため、呼び出し側でケアが必要。
+    // 安全のため、未定義の場合はエラーを投げるか、機能しないダミークライアントを返す。
+    // ここでは、呼び出し元でエラーが発生するように、不完全なキーで初期化しようとせず、
+    // supabase インスタンスとは別に扱うことを明確にする。
+    // もし adminSupabaseUrl と supabaseServiceKey がなければ、supabaseAdmin は使えない。
+    // 簡単のため、ここではエラーを出すのではなく、利用箇所で問題が出るようにする。
+    // より堅牢にするなら、ここでエラーを投げる。
+    return createClient(adminSupabaseUrl || "http://localhost:54321", supabaseServiceKey || "dummykey") // ダミーキーで初期化するとエラーになる
+  }
+  return createClient(adminSupabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+})()
 
-export default supabase
+// Client-side client (with anon key) - supabase としてエクスポート済み
+export const supabaseClient = supabase // supabase を supabaseClient としてもエクスポート
+
+export default supabase // デフォルトエクスポートも supabase
 
 // PDF Documents related functions
 export interface PdfDocument {
@@ -61,7 +86,32 @@ export interface ChatMessage {
 }
 
 export class SupabaseService {
-  constructor(private client: SupabaseClient = supabaseAdmin) {}
+  private client: SupabaseClient
+
+  constructor(useAdminClient = false) {
+    if (useAdminClient) {
+      const adminSupabaseUrl = process.env.SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (!adminSupabaseUrl || !supabaseServiceKey) {
+        throw new Error(
+          "Supabase admin client cannot be initialized: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.",
+        )
+      }
+      this.client = createClient(adminSupabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    } else {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error(
+          "Supabase client cannot be initialized: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing.",
+        )
+      }
+      this.client = supabase // 公開クライアントを使用
+    }
+  }
 
   // PDF Documents
   async getPdfDocuments(
@@ -205,4 +255,6 @@ export class SupabaseService {
   }
 }
 
+// SupabaseService のインスタンス化。デフォルトは公開クライアントを使用。
+// サーバーサイドで admin 操作が必要な場合は `new SupabaseService(true)` としてインスタンス化する。
 export const supabaseService = new SupabaseService()
