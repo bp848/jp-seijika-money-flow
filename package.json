@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "latest",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
@@ -19,7 +20,7 @@
     "@radix-ui/react-collapsible": "1.1.2",
     "@radix-ui/react-context-menu": "2.2.4",
     "@radix-ui/react-dialog": "latest",
-    "@radix-ui/react-dropdown-menu": "2.1.4",
+    "@radix-ui/react-dropdown-menu": "latest",
     "@radix-ui/react-hover-card": "1.1.4",
     "@radix-ui/react-label": "latest",
     "@radix-ui/react-menubar": "1.1.4",
@@ -50,8 +51,8 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "framer-motion": "latest",
-    "google-auth-library": "latest",
     "groq-sdk": "latest",
+    "https:": "latest",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",

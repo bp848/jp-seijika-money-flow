@@ -19,9 +19,8 @@ function logUpload(level: "INFO" | "ERROR" | "DEBUG", message: string, data?: an
         level: level.toLowerCase(),
         component: "pdf-upload",
         message,
-        data: data ? JSON.stringify(data) : null, // `metadata` から `data` へ、スキーマに合わせる
-        created_at: new Date().toISOString(), // `timestamp` から `created_at` へ
-        // file_name, process_id なども必要に応じて設定
+        data: data ? JSON.stringify(data) : null,
+        created_at: new Date().toISOString(),
       })
       .then(() => {})
       .catch((err) => console.error("ログ保存エラー:", err))
@@ -68,7 +67,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      // 50MB
       logUpload("ERROR", "ファイルサイズ超過", { fileSize: file.size })
       return NextResponse.json({ error: "ファイルサイズは50MB以下にしてください" }, { status: 400 })
     }
@@ -79,7 +77,7 @@ export async function POST(request: NextRequest) {
       fileType: file.type,
     })
 
-    // 重複チェック（ファイル名のみで判定）
+    // 重複チェック（ファイル名のみで判定）- 厳密な重複チェックは後で実装
     const { data: existingFiles, error: checkError } = await supabase
       .from("pdf_documents")
       .select("id, file_name, file_size, upload_datetime, status")
@@ -88,10 +86,12 @@ export async function POST(request: NextRequest) {
 
     if (checkError) {
       logUpload("ERROR", "重複チェック時のDBエラー", checkError)
-      // エラーがあっても処理を続行（重複チェックの失敗は致命的ではない場合もある）
+      // エラーがあっても処理を続行（重複チェックの失敗は致命的ではない）
     } else if (existingFiles && existingFiles.length > 0) {
       const existingFile = existingFiles[0]
       logUpload("INFO", "重複ファイル検出", { existingFile })
+
+      // 重複ファイルの処理状況を確認
       return NextResponse.json({
         success: true,
         isDuplicate: true,
@@ -101,7 +101,10 @@ export async function POST(request: NextRequest) {
           fileName: existingFile.file_name,
           uploadDate: existingFile.upload_datetime,
           status: existingFile.status || "unknown",
-          canReprocess: ["error", "ocr_failed", "indexing_failed", "completed"].includes(existingFile.status || ""),
+          canReprocess:
+            existingFile.status === "error" ||
+            existingFile.status === "ocr_failed" ||
+            existingFile.status === "indexing_failed",
         },
       })
     }
@@ -112,7 +115,6 @@ export async function POST(request: NextRequest) {
     try {
       blob = await put(file.name, file, {
         access: "public",
-        contentType: file.type, // Add content type
       })
       logUpload("INFO", "Blobアップロード完了", { blobUrl: blob.url })
     } catch (blobError) {
@@ -127,30 +129,19 @@ export async function POST(request: NextRequest) {
     }
 
     // ファイル名から政党名と地域を推定（簡易版）
-    const fileNameLower = file.name.toLowerCase()
+    const fileName = file.name.toLowerCase()
     let partyName = "不明"
     let region = "不明"
 
-    const partyKeywords: { [key: string]: string } = {
-      自民: "自由民主党",
-      自由民主: "自由民主党",
-      立憲: "立憲民主党",
-      立民: "立憲民主党",
-      公明: "公明党",
-      維新: "日本維新の会",
-      共産: "日本共産党",
-      国民民主: "国民民主党",
-      れいわ: "れいわ新選組",
-      社民: "社会民主党",
-      nhk: "NHK党", // 正式名称に応じて調整
-    }
-    for (const keyword in partyKeywords) {
-      if (fileNameLower.includes(keyword)) {
-        partyName = partyKeywords[keyword]
-        break
-      }
-    }
+    // 政党名推定
+    if (fileName.includes("自民") || fileName.includes("自由民主")) partyName = "自由民主党"
+    else if (fileName.includes("立憲") || fileName.includes("立民")) partyName = "立憲民主党"
+    else if (fileName.includes("公明")) partyName = "公明党"
+    else if (fileName.includes("維新")) partyName = "日本維新の会"
+    else if (fileName.includes("共産")) partyName = "日本共産党"
+    else if (fileName.includes("国民民主")) partyName = "国民民主党"
 
+    // 地域推定
     const regions = [
       "北海道",
       "青森",
@@ -200,8 +191,9 @@ export async function POST(request: NextRequest) {
       "鹿児島",
       "沖縄",
     ]
+
     for (const r of regions) {
-      if (fileNameLower.includes(r.toLowerCase())) {
+      if (fileName.includes(r)) {
         region = r
         break
       }
@@ -209,34 +201,36 @@ export async function POST(request: NextRequest) {
 
     // データベースに保存
     logUpload("INFO", "データベース保存開始", { fileName: file.name, blobUrl: blob.url })
+
     const documentData = {
       file_name: file.name,
       blob_url: blob.url,
       file_size: file.size,
       party_name: partyName,
       region: region,
-      status: "pending", // 初期ステータス
+      status: "pending",
       upload_datetime: new Date().toISOString(),
-      // ocr_text, groq_index_idなどは後続処理で設定
     }
 
     const { data: dbData, error: dbError } = await supabase.from("pdf_documents").insert(documentData).select().single()
 
     if (dbError) {
       logUpload("ERROR", "データベース保存エラー", { error: dbError, documentData })
+
+      // 重複エラーの場合の特別処理
       if (dbError.code === "23505") {
-        // Unique constraint violation
         logUpload("INFO", "DB重複エラー - 既存レコード検索")
         const { data: existingRecord } = await supabase
           .from("pdf_documents")
           .select("*")
-          .eq("file_name", file.name) // Or a more robust unique identifier if available
+          .eq("file_name", file.name)
           .single()
+
         if (existingRecord) {
           return NextResponse.json({
             success: true,
             isDuplicate: true,
-            message: "同じファイルが既にデータベースに存在します（ユニーク制約違反）",
+            message: "同じファイルが既にアップロードされています",
             file: {
               id: existingRecord.id,
               fileName: existingRecord.file_name,
@@ -246,32 +240,42 @@ export async function POST(request: NextRequest) {
           })
         }
       }
-      return NextResponse.json({ error: "ファイル情報の保存に失敗しました", details: dbError.message }, { status: 500 })
+
+      return NextResponse.json(
+        {
+          error: "ファイル情報の保存に失敗しました",
+          details: dbError.message,
+        },
+        { status: 500 },
+      )
     }
 
     logUpload("INFO", "データベース保存完了", { documentId: dbData.id })
 
-    // OCR処理を自動開始（非同期でindex APIを呼び出す）
-    logUpload("INFO", "OCR処理自動開始準備", { documentId: dbData.id })
-    fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/pdf/index`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentIds: [dbData.id], reprocess: false }), // 初期処理なのでreprocessはfalse
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const errorResult = await res.json().catch(() => ({}))
-          logUpload("ERROR", "OCR処理API呼び出し失敗", { status: res.status, documentId: dbData.id, errorResult })
-        } else {
-          const result = await res.json().catch(() => ({}))
-          logUpload("INFO", "OCR処理API呼び出し成功", { documentId: dbData.id, result })
-        }
-      })
-      .catch((ocrError) => {
-        logUpload("ERROR", "OCR処理API呼び出し中の例外", { documentId: dbData.id, ocrError })
+    // OCR処理を自動開始（非同期）
+    logUpload("INFO", "OCR処理自動開始準備")
+
+    // 実際にOCR処理を開始するAPIを呼び出す
+    try {
+      const ocrResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/pdf/index`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentIds: [dbData.id],
+          reprocess: false,
+        }),
       })
 
-    logUpload("INFO", "アップロード処理完了、OCR処理をバックグラウンドで開始", {
+      const ocrResult = await ocrResponse.json()
+      logUpload("INFO", "OCR処理開始結果", ocrResult)
+
+      // OCR処理の開始に成功したかどうかに関わらず、アップロード自体は成功として扱う
+    } catch (ocrError) {
+      logUpload("ERROR", "OCR処理開始失敗", ocrError)
+      // OCR処理の開始に失敗しても、アップロード自体は成功として扱う
+    }
+
+    logUpload("INFO", "アップロード処理完了", {
       uploadId,
       documentId: dbData.id,
       fileName: file.name,
@@ -280,7 +284,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       isDuplicate: false,
-      message: "ファイルのアップロードが完了しました。OCRおよびデータ解析処理をバックグラウンドで開始します。",
+      message: "ファイルのアップロードが完了しました。OCR処理を開始します。",
       file: {
         id: dbData.id,
         fileName: dbData.file_name,
@@ -288,7 +292,7 @@ export async function POST(request: NextRequest) {
         fileSize: dbData.file_size,
         partyName: dbData.party_name,
         region: dbData.region,
-        status: dbData.status, // 'pending'
+        status: dbData.status,
         uploadDate: dbData.upload_datetime,
       },
     })
@@ -296,7 +300,7 @@ export async function POST(request: NextRequest) {
     logUpload("ERROR", "アップロード処理中の致命的エラー", error)
     return NextResponse.json(
       {
-        error: "ファイルアップロード中に予期せぬエラーが発生しました",
+        error: "ファイルアップロード中にエラーが発生しました",
         details: error instanceof Error ? error.message : "不明なエラー",
         uploadId,
       },

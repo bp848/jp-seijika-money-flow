@@ -1,53 +1,39 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { NetworkGraphView } from "@/components/network-graph-view"
-import { RightSidebar } from "@/components/right-sidebar"
-import type { Entity, FundFlow } from "@/types"
-import { getInitialData } from "@/lib/data"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import TimelineView from "@/components/timeline-view"
+import NetworkGraphView from "@/components/network-graph-view"
+import type { Transaction, CytoscapeNodeData } from "@/types"
+import { GanttChartSquare, GitFork } from "lucide-react"
 
-export function MainView() {
-  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
-  const [fundFlows, setFundFlows] = useState<FundFlow[]>([])
-  const [entities, setEntities] = useState<Entity[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+interface MainViewProps {
+  transactions: Transaction[]
+  onSelectTransaction: (transaction: Transaction) => void
+  onNodeSelect: (nodeData: CytoscapeNodeData) => void
+}
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true)
-      try {
-        const { entities, fundFlows } = await getInitialData()
-        setEntities(entities)
-        setFundFlows(fundFlows)
-      } catch (error) {
-        console.error("Failed to fetch initial data:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
-
-  const handleNodeClick = (entity: Entity) => {
-    setSelectedEntity(entity)
-  }
-
-  const handleDeselect = () => {
-    setSelectedEntity(null)
-  }
-
+export default function MainView({ transactions, onSelectTransaction, onNodeSelect }: MainViewProps) {
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      <div className="flex-1 relative">
-        <NetworkGraphView
-          entities={entities}
-          fundFlows={fundFlows}
-          onNodeClick={handleNodeClick}
-          selectedEntity={selectedEntity}
-          isLoading={isLoading}
-        />
+    <Tabs defaultValue="timeline" className="w-full h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">分析ビュー</h2>
+        <TabsList>
+          <TabsTrigger value="timeline">
+            <GanttChartSquare className="mr-2 h-4 w-4" />
+            タイムライン
+          </TabsTrigger>
+          <TabsTrigger value="network">
+            <GitFork className="mr-2 h-4 w-4" />
+            ネットワーク
+          </TabsTrigger>
+        </TabsList>
       </div>
-      <RightSidebar entity={selectedEntity} onClose={handleDeselect} fundFlows={fundFlows} />
-    </div>
+      <TabsContent value="timeline" className="flex-1 overflow-hidden">
+        <TimelineView transactions={transactions} onSelectTransaction={onSelectTransaction} />
+      </TabsContent>
+      <TabsContent value="network" className="flex-1">
+        <NetworkGraphView transactions={transactions} onNodeSelect={onNodeSelect} />
+      </TabsContent>
+    </Tabs>
   )
 }
