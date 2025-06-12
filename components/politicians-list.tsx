@@ -1,50 +1,42 @@
 "use client"
 
-import useSWR from "swr"
-import { supabase } from "@/lib/supabase-client"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
-import { AlertTriangle, UsersIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertTriangle, UsersIcon } from "lucide-react"
+import { usePoliticians, type Politician } from "@/hooks/use-politicians" // Ensure Politician type is exported
+import { useRouter } from "next/navigation"
 
-interface Politician {
-  id: string
-  name: string | null
-  party_id: string | null
+interface PoliticiansListProps {
+  partyId?: string | null
+  searchTerm?: string
 }
 
-export default function PoliticiansList() {
-  const fetcher = async (): Promise<Politician[]> => {
-    const { data, error } = await supabase.from("politicians").select("id, name, party_id").order("name")
-    if (error) throw error
-    return data || []
-  }
-
-  const { data: politicians, error, isLoading, mutate } = useSWR<Politician[]>("politicians", fetcher)
+export default function PoliticiansList({ partyId, searchTerm }: PoliticiansListProps) {
+  const { politicians, isLoading, isError, refetch } = usePoliticians({ partyId, searchTerm, limit: 50 }) // Increased limit
   const router = useRouter()
 
   const renderContent = () => {
     if (isLoading) {
       return (
         <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(7)].map((_, i) => (
             <Skeleton key={i} className="h-9 w-full rounded-md" />
           ))}
         </div>
       )
     }
 
-    if (error) {
+    if (isError) {
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>エラー</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
-            <span>政治家データの取得に失敗しました。</span>
-            <Button onClick={() => mutate()} variant="outline" size="sm" className="ml-2">
+            <span>政治家データの取得に失敗。</span>
+            <Button onClick={() => refetch()} variant="outline" size="sm" className="ml-2">
               再試行
             </Button>
           </AlertDescription>
@@ -58,15 +50,18 @@ export default function PoliticiansList() {
 
     return (
       <ul className="space-y-1">
-        {politicians.map((p) => (
-          <li key={p.id}>
+        {politicians.map((politician: Politician) => (
+          <li key={politician.id}>
             <Button
               variant="ghost"
               size="sm"
               className="w-full justify-start text-left h-auto py-1.5 px-2"
-              onClick={() => router.push(`/politician/${p.id}`)}
+              onClick={() => router.push(`/politician/${politician.id}`)} // Assuming detail page exists
             >
-              {p.name || "名前不明"}
+              {politician.name || "氏名不明"}
+              {politician.party_name && politician.party_name !== "無所属" && (
+                <span className="ml-2 text-xs text-muted-foreground">({politician.party_name})</span>
+              )}
             </Button>
           </li>
         ))}
