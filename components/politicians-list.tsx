@@ -1,78 +1,89 @@
-// src/components/PoliticiansList.tsx
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation" // コメントアウト解除
-import { usePoliticians } from "@/hooks/use-politicians"
-import { useDebounce } from "@/hooks/use-debounce"
+import useSWR from "swr"
+import { supabase } from "@/lib/supabase-client"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AlertTriangle, UsersIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Search, User, AlertTriangle } from "lucide-react"
-import PoliticianItem from "./politician-item" // PoliticianItemをインポート
+import { ScrollArea } from "@/components/ui/scroll-area"
 
-// スケルトンコンポーネント (変更なし)
-const PoliticianSkeleton = () => (
-  <div className="p-4 border-b border-gray-200 dark:border-gray-700 animate-pulse">
-    <div className="flex justify-between items-center">
-      <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
-      <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
-    </div>
-  </div>
-)
+interface Politician {
+  id: string
+  name: string | null
+  party_id: string | null
+}
 
 export default function PoliticiansList() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const debouncedSearchTerm = useDebounce(searchTerm, 300)
-  const { politicians, isLoading, isError } = usePoliticians({
-    searchTerm: debouncedSearchTerm,
-  })
-  const router = useRouter() // コメントアウト解除
+  const fetcher = async (): Promise<Politician[]> => {
+    const { data, error } = await supabase.from("politicians").select("id, name, party_id").order("name")
+    if (error) throw error
+    return data || []
+  }
+
+  const { data: politicians, error, isLoading, mutate } = useSWR<Politician[]>("politicians", fetcher)
+  const router = useRouter()
 
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div>
+        <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <PoliticianSkeleton key={i} />
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
           ))}
         </div>
       )
     }
-    if (isError) {
+
+    if (error) {
       return (
-        <div className="p-4 text-center text-red-600 dark:text-red-400 flex items-center justify-center">
-          <AlertTriangle className="w-5 h-5 mr-2" />
-          データの読み込みに失敗しました。
-        </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>エラー</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>政治家データの取得に失敗しました。</span>
+            <Button onClick={() => mutate()} variant="outline" size="sm" className="ml-2">
+              再試行
+            </Button>
+          </AlertDescription>
+        </Alert>
       )
     }
+
     if (!politicians || politicians.length === 0) {
-      return (
-        <div className="p-4 text-center text-gray-500 dark:text-gray-400">該当する政治家が見つかりませんでした。</div>
-      )
+      return <p className="text-sm text-muted-foreground">該当する政治家データはありません。</p>
     }
-    return politicians.map((politician) => <PoliticianItem key={politician.id} politician={politician} />)
+
+    return (
+      <ul className="space-y-1">
+        {politicians.map((p) => (
+          <li key={p.id}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-left h-auto py-1.5 px-2"
+              onClick={() => router.push(`/politician/${p.id}`)}
+            >
+              {p.name || "名前不明"}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    )
   }
 
   return (
-    <Card className="bg-white dark:bg-gray-800 shadow-md">
-      <CardHeader>
-        <CardTitle className="flex items-center text-gray-900 dark:text-gray-100">
-          <User className="w-6 h-6 mr-2" />
+    <Card>
+      <CardHeader className="py-4">
+        <CardTitle className="flex items-center text-xl">
+          <UsersIcon className="mr-2 h-5 w-5" />
           政治家リスト
         </CardTitle>
-        <div className="relative mt-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <Input
-            placeholder="政治家名で検索..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-          />
-        </div>
       </CardHeader>
       <CardContent>
-        <div className="border border-gray-200 dark:border-gray-700 rounded-md">{renderContent()}</div>
+        <ScrollArea className="h-[300px] pr-3">{renderContent()}</ScrollArea>
       </CardContent>
     </Card>
   )

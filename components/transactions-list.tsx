@@ -1,170 +1,126 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import useSWR from "swr"
+import { supabase } from "@/lib/supabase-client"
 import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ArrowRight, Calendar, DollarSign, AlertCircle } from "lucide-react"
-import { useTransactions } from "@/hooks/use-transactions"
-import { useDebounce } from "@/hooks/use-debounce"
-import type { Transaction } from "@/types/database"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AlertTriangle, ArrowRightLeftIcon } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
-  const router = useRouter()
-
-  const handleEntityClick = useCallback(
-    (entityId: string | null, entityName: string) => {
-      if (!entityId) {
-        console.warn(`Entity ID not found for: ${entityName}`)
-        return
-      }
-      router.push(`/politician-dashboard/${entityId}`)
-    },
-    [router],
-  )
-
-  const getTransactionTypeColor = useCallback((type: string) => {
-    switch (type) {
-      case "寄付":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "支出":
-        return "bg-red-100 text-red-800 border-red-200"
-      case "移転":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }, [])
-
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4 flex-1">
-            <div className="flex items-center space-x-2">
-              {transaction.source_entity_id ? (
-                <Button
-                  variant="link"
-                  className="p-0 h-auto font-medium text-blue-600 hover:text-blue-800"
-                  onClick={() => handleEntityClick(transaction.source_entity_id, transaction.source_entity)}
-                >
-                  {transaction.source_entity}
-                </Button>
-              ) : (
-                <span className="font-medium text-gray-600 cursor-not-allowed" title="詳細情報なし">
-                  {transaction.source_entity}
-                </span>
-              )}
-              <ArrowRight className="h-4 w-4 text-gray-400" />
-              {transaction.target_entity_id ? (
-                <Button
-                  variant="link"
-                  className="p-0 h-auto font-medium text-green-600 hover:text-green-800"
-                  onClick={() => handleEntityClick(transaction.target_entity_id, transaction.target_entity)}
-                >
-                  {transaction.target_entity}
-                </Button>
-              ) : (
-                <span className="font-medium text-gray-600 cursor-not-allowed" title="詳細情報なし">
-                  {transaction.target_entity}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-gray-500" />
-              <span className="font-bold text-lg">¥{transaction.amount.toLocaleString()}</span>
-            </div>
-            <Badge className={getTransactionTypeColor(transaction.transaction_type)}>
-              {transaction.transaction_type}
-            </Badge>
-            <div className="flex items-center space-x-1 text-sm text-gray-500">
-              <Calendar className="h-4 w-4" />
-              <span>{new Date(transaction.occurred_on).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+interface FundFlow {
+  id: string
+  source_entity: string | null
+  target_entity: string | null
+  amount: number | null
+  flow_date: string | null
 }
 
-const SkeletonLoader = () => (
-  <div className="space-y-3">
-    {[...Array(5)].map((_, i) => (
-      <Card key={i}>
-        <CardContent className="p-4">
-          <div className="h-5 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-)
-
 export default function TransactionsList() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
-  const debouncedSearchTerm = useDebounce(searchTerm, 500)
+  const fetcher = async (): Promise<FundFlow[]> => {
+    const { data, error } = await supabase
+      .from("fund_flows")
+      .select("id, source_entity, target_entity, amount, flow_date")
+      .order("flow_date", { ascending: false })
+      .limit(100) // Reduced limit for initial display
+    if (error) throw error
+    return data || []
+  }
 
-  const { transactions, isLoading, isError } = useTransactions({
-    searchTerm: debouncedSearchTerm,
-    typeFilter,
-    limit: 100,
-  })
+  const { data: flows, error, isLoading, mutate } = useSWR<FundFlow[]>("transactions", fetcher)
+  const router = useRouter()
 
   const renderContent = () => {
     if (isLoading) {
-      return <SkeletonLoader />
+      return [...Array(7)].map((_, i) => (
+        <TableRow key={i}>
+          <TableCell className="py-2.5">
+            <Skeleton className="h-5 w-20" />
+          </TableCell>
+          <TableCell className="py-2.5">
+            <Skeleton className="h-5 w-28" />
+          </TableCell>
+          <TableCell className="py-2.5">
+            <Skeleton className="h-5 w-28" />
+          </TableCell>
+          <TableCell className="text-right py-2.5">
+            <Skeleton className="h-5 w-16 ml-auto" />
+          </TableCell>
+        </TableRow>
+      ))
     }
-    if (isError) {
+
+    if (error) {
       return (
-        <div className="flex items-center justify-center p-8 text-red-600">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          データの取得に失敗しました
-        </div>
+        <TableRow>
+          <TableCell colSpan={4} className="py-2.5">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>エラー</AlertTitle>
+              <AlertDescription className="flex items-center justify-between">
+                <span>資金移動データの取得に失敗しました。</span>
+                <Button onClick={() => mutate()} variant="outline" size="sm" className="ml-2">
+                  再試行
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </TableCell>
+        </TableRow>
       )
     }
-    if (!transactions || transactions.length === 0) {
-      return <div className="text-center p-8 text-gray-500">検索条件に一致する取引が見つかりませんでした</div>
+
+    if (!flows || flows.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-2.5">
+            該当する資金移動データはありません。
+          </TableCell>
+        </TableRow>
+      )
     }
-    return (
-      <div className="space-y-3">
-        {transactions.map((transaction) => (
-          <TransactionItem key={transaction.id} transaction={transaction} />
-        ))}
-      </div>
-    )
+
+    return flows.map((f) => (
+      <TableRow
+        key={f.id}
+        className="cursor-pointer hover:bg-muted/50"
+        onClick={() => router.push(`/transaction/${f.id}`)}
+      >
+        <TableCell className="text-xs text-muted-foreground py-2.5">
+          {f.flow_date ? new Date(f.flow_date).toLocaleDateString() : "-"}
+        </TableCell>
+        <TableCell className="text-sm py-2.5">{f.source_entity || "不明"}</TableCell>
+        <TableCell className="text-sm py-2.5">{f.target_entity || "不明"}</TableCell>
+        <TableCell className="text-sm text-right font-medium py-2.5">¥{f.amount?.toLocaleString() || "-"}</TableCell>
+      </TableRow>
+    ))
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex items-center space-x-2 flex-1">
-          <Search className="h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="送金元または送金先で検索..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="取引種別で絞り込み" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">すべて</SelectItem>
-            <SelectItem value="寄付">寄付</SelectItem>
-            <SelectItem value="支出">支出</SelectItem>
-            <SelectItem value="移転">移転</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {renderContent()}
-    </div>
+    <Card>
+      <CardHeader className="py-4">
+        <CardTitle className="flex items-center text-xl">
+          <ArrowRightLeftIcon className="mr-2 h-5 w-5" />
+          最新の資金移動 (上位100件)
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[400px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px] py-2">日付</TableHead>
+                <TableHead className="py-2">送金元</TableHead>
+                <TableHead className="py-2">送金先</TableHead>
+                <TableHead className="text-right py-2">金額</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{renderContent()}</TableBody>
+          </Table>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   )
 }

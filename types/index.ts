@@ -50,16 +50,51 @@ export interface NodeSizeConfig {
 }
 
 export interface FundManagementOrganization {
-  id: number
-  politician_id: number | null // Assuming it can be nullable if a fund management organization isn't directly tied to one politician initially
-  organization_name: string
+  id: string // Changed to string to match other IDs
+  politician_id: string | null
+  organization_name: string | null
   office_type: string | null
   report_year: number | null
-  notified_date: string | null // ISO date string
+  notified_date: string | null
   jurisdiction: string | null
   is_active: boolean | null
-  created_at: string // ISO datetime string
-  updated_at: string // ISO datetime string
-  // Optional: if you plan to join with politicians table
-  politicians?: { name: string; id: number } // Example, adjust as needed
+  created_at: string
+  updated_at: string
+  politicians?: { name: string; id: string }
+}
+
+// Ensure Party and Politician types are comprehensive for the UI
+
+export interface Party {
+  id: string
+  name: string
+  representative?: string | null
+  establishment_date?: string | null
+  member_count?: number | null
+  // Add any other fields that might be used in PartyGridDisplay or elsewhere
+}
+
+export interface Politician {
+  id: string
+  name: string
+  district?: string | null
+  last_elected_date?: string | null
+  party_id?: string | null
+  party?: {
+    // For joined data
+    name?: string | null
+  } | null
+  // Add any other fields that might be used in PoliticiansPanel or elsewhere
+  political_parties?: {
+    // Direct from Supabase join if not aliased
+    name?: string | null
+  } | null
+}
+
+export interface FundFlow {
+  id: string
+  source_entity: string | null
+  target_entity: string | null
+  amount: number | null
+  flow_date: string | null
 }

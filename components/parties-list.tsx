@@ -1,87 +1,89 @@
 "use client"
 
-import { useState } from "react"
+import useSWR from "swr"
+import { supabase } from "@/lib/supabase-client"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Search, Building2, Users } from "lucide-react"
-import { useParties } from "@/hooks/use-parties"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AlertTriangle, FlagIcon } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+interface Party {
+  id: string
+  name: string | null
+}
 
 export default function PartiesList() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const { parties, isLoading, isError } = useParties()
+  const fetcher = async (): Promise<Party[]> => {
+    const { data, error } = await supabase.from("political_parties").select("id, name").order("name")
+    if (error) throw error
+    return data || []
+  }
+
+  const { data: parties, error, isLoading, mutate } = useSWR<Party[]>("parties", fetcher)
   const router = useRouter()
 
-  if (isLoading) return <div className="text-center p-8">政党データを読み込み中...</div>
-  if (isError) return <div className="text-center p-8 text-red-500">データの取得に失敗しました</div>
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
+          ))}
+        </div>
+      )
+    }
 
-  const filteredParties =
-    parties?.filter(
-      (party) =>
-        party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        party.leader?.toLowerCase().includes(searchTerm.toLowerCase()),
-    ) || []
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>エラー</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>政党データの取得に失敗しました。</span>
+            <Button onClick={() => mutate()} variant="outline" size="sm" className="ml-2">
+              再試行
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )
+    }
+
+    if (!parties || parties.length === 0) {
+      return <p className="text-sm text-muted-foreground">該当する政党データはありません。</p>
+    }
+
+    return (
+      <ul className="space-y-1">
+        {parties.map((pt) => (
+          <li key={pt.id}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-left h-auto py-1.5 px-2"
+              onClick={() => router.push(`/party/${pt.id}`)}
+            >
+              {pt.name || "名前不明"}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-gray-500" />
-        <Input
-          placeholder="政党名または代表者名で検索..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredParties.map((party) => (
-          <Card key={party.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Building2 className="h-5 w-5" />
-                {party.name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {party.leader && (
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <span
-                      className="text-sm text-blue-600 hover:underline cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        router.push(`/politician-dashboard/${party.leader_id || party.leader}`)
-                      }}
-                    >
-                      {party.leader}
-                    </span>
-                  </div>
-                )}
-                {party.member_count && <Badge variant="outline">{party.member_count}名</Badge>}
-                {party.founded_date && (
-                  <p className="text-sm text-gray-600">設立: {new Date(party.founded_date).toLocaleDateString()}</p>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2"
-                  onClick={() => router.push(`/politician-dashboard/party-${party.id}`)}
-                >
-                  政党ダッシュボード
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredParties.length === 0 && (
-        <div className="text-center p-8 text-gray-500">検索条件に一致する政党が見つかりませんでした</div>
-      )}
-    </div>
+    <Card>
+      <CardHeader className="py-4">
+        <CardTitle className="flex items-center text-xl">
+          <FlagIcon className="mr-2 h-5 w-5" />
+          政党リスト
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[300px] pr-3">{renderContent()}</ScrollArea>
+      </CardContent>
+    </Card>
   )
 }
