@@ -1,0 +1,85 @@
+import type { Transaction, AnalysisHistoryItem } from "@/types"
+
+export const mockTransactions: Transaction[] = [
+  {
+    id: "tx-001",
+    date: "2024-11-15",
+    from: "株式会社テクノ未来",
+    to: "〇〇 太郎 後援会",
+    amount: 1000000,
+    type: "income",
+    description: "政策研究会への寄付",
+    documentUrl: "/placeholder.pdf",
+  },
+  {
+    id: "tx-002",
+    date: "2024-11-10",
+    from: "〇〇 太郎 後援会",
+    to: "株式会社プリントサービス",
+    amount: 250000,
+    type: "expense",
+    description: "広報誌印刷代",
+    documentUrl: "/placeholder.pdf",
+  },
+  {
+    id: "tx-003",
+    date: "2024-11-05",
+    from: "△△党本部",
+    to: "〇〇 太郎 後援会",
+    amount: 500000,
+    type: "income",
+    description: "政党交付金",
+    documentUrl: "/placeholder.pdf",
+  },
+  {
+    id: "tx-004",
+    date: "2024-10-28",
+    from: "〇〇 太郎 後援会",
+    to: "イベント会場 ABCホール",
+    amount: 300000,
+    type: "expense",
+    description: "国政報告会 会場費",
+    documentUrl: "/placeholder.pdf",
+  },
+  {
+    id: "tx-005",
+    date: "2024-10-20",
+    from: "建設業連合会",
+    to: "〇〇 太郎 後援会",
+    amount: 1500000,
+    type: "income",
+    description: "政治献金",
+    documentUrl: "/placeholder.pdf",
+  },
+  {
+    id: "tx-006",
+    date: "2024-10-15",
+    from: "〇〇 太郎 後援会",
+    to: "ウェブ制作会社デジタル",
+    amount: 400000,
+    type: "expense",
+    description: "公式サイトリニューアル費用",
+    documentUrl: "/placeholder.pdf",
+  },
+]
+
+export const mockAnalysisHistory: AnalysisHistoryItem[] = [
+  {
+    id: "hist-001",
+    timestamp: "2025-06-08T10:30:00Z",
+    query: "過去1年間のIT業界からの献金トップ5は？",
+    resultType: "graph",
+  },
+  {
+    id: "hist-002",
+    timestamp: "2025-06-08T09:45:00Z",
+    query: "〇〇議員の主な資金提供元を教えて",
+    resultType: "text",
+  },
+  {
+    id: "hist-003",
+    timestamp: "2025-06-07T15:20:00Z",
+    query: "△△党と関係の深い企業トップ10",
+    resultType: "graph",
+  },
+]

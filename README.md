@@ -1,9 +1,9 @@
-# japan-seiji
+# 政治
 
 *Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/bp-5f70f10d/v0-bp848-jp-seijishikin-flow-api)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/h302hKhnvaR)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/bp-5f70f10d/japan-seikin-api)
+[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/CGIsQsdO2Wq)
 
 ## Overview
 
@@ -14,13 +14,13 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/bp-5f70f10d/v0-bp848-jp-seijishikin-flow-api](https://vercel.com/bp-5f70f10d/v0-bp848-jp-seijishikin-flow-api)**
+**[https://vercel.com/bp-5f70f10d/japan-seikin-api](https://vercel.com/bp-5f70f10d/japan-seikin-api)**
 
 ## Build your app
 
 Continue building your app on:
 
-**[https://v0.dev/chat/projects/h302hKhnvaR](https://v0.dev/chat/projects/h302hKhnvaR)**
+**[https://v0.dev/chat/projects/CGIsQsdO2Wq](https://v0.dev/chat/projects/CGIsQsdO2Wq)**
 
 ## How It Works
 
