@@ -54,6 +54,20 @@ interface PoliticalFundGroup {
   net_balance?: number | null
 }
 
+interface FundManagementOrganization {
+  id: number
+  politician_id?: number | null
+  organization_name: string
+  office_type?: string | null
+  report_year?: number | null
+  notified_date?: string | null
+  jurisdiction?: string | null
+  is_active?: boolean | null
+  created_at: string
+  updated_at: string
+  politicians?: { name: string; id: number }
+}
+
 const formatCurrency = (amount: number | null | undefined) => {
   if (amount == null) return "-"
   return `¥${Number(amount).toLocaleString()}`
@@ -100,16 +114,15 @@ export default function PoliticalDataPage() {
         href: (row) => `/explorer/politician/${row.id}`,
       },
       {
-        key: "party_id", // Key is now party_id, which exists in the data
+        key: "party_id",
         label: "政党",
         href: (row) =>
           row.branch_id
-            ? `/explorer/branch/${row.branch_id}`
+            ? `/politician-dashboard/branch/${row.branch_id}`
             : row.party_id
-              ? `/explorer/party/${row.party_id}`
+              ? `/politician-dashboard/party/${row.party_id}`
               : undefined,
         render: (value, row) => {
-          // 'value' is now row.party_id
           if (isLoadingParties) {
             return <Skeleton className="h-4 w-24" />
           }
@@ -147,9 +160,14 @@ export default function PoliticalDataPage() {
       {
         key: "name",
         label: "党名",
-        href: (row: Party) => `/explorer/party/${row.id}`,
+        href: (row: Party) => `/politician-dashboard/party/${row.id}`,
       },
-      { key: "representative_name", label: "代表者", render: (value) => value || "-" },
+      {
+        key: "representative_name",
+        label: "代表者",
+        render: (value) => value || "-",
+        href: (row: Party) => (row.representative_name ? `/politician-dashboard/politician/${row.id}` : undefined),
+      },
       {
         key: "total_income",
         label: "総収入",
@@ -233,6 +251,32 @@ export default function PoliticalDataPage() {
     [],
   )
 
+  const fundManagementOrganizationColumns = useMemo(
+    (): Column<FundManagementOrganization>[] => [
+      {
+        key: "organization_name",
+        label: "団体名",
+        href: (row: FundManagementOrganization) => `/politician-dashboard/fund-org/${row.id}`,
+      },
+      {
+        key: "politicians",
+        label: "関連政治家",
+        render: (value, row) => row.politicians?.name || "-",
+        href: (row: FundManagementOrganization) =>
+          row.politicians ? `/politician-dashboard/politician/${row.politicians.id}` : undefined,
+      },
+      { key: "office_type", label: "公職種類", render: (value) => value || "-" },
+      { key: "report_year", label: "報告年", render: (value) => value || "-" },
+      { key: "jurisdiction", label: "管轄", render: (value) => value || "-" },
+      {
+        key: "is_active",
+        label: "状態",
+        render: (value) => (value === true ? "活動中" : value === false ? "非活動" : "-"),
+      },
+    ],
+    [],
+  )
+
   const handlePoliticianRowClick = (row: Politician) => {
     router.push(`/explorer/politician/${row.id}`)
   }
@@ -242,6 +286,7 @@ export default function PoliticalDataPage() {
     parties: "/api/political-parties",
     partyBranches: "/api/party-branches",
     politicalFundGroups: "/api/political-funds",
+    fundManagementOrganizations: "/api/fund-management-organizations",
   }
 
   return (
@@ -263,7 +308,7 @@ export default function PoliticalDataPage() {
       </div>
 
       <Tabs defaultValue="politicians" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-gray-800 border-gray-700 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-gray-800 border-gray-700 p-1 rounded-lg">
           <TabsTrigger
             value="politicians"
             className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-gray-300"
@@ -287,6 +332,12 @@ export default function PoliticalDataPage() {
             className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-gray-300"
           >
             政治資金団体
+          </TabsTrigger>
+          <TabsTrigger
+            value="fundManagementOrganizations"
+            className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-gray-300"
+          >
+            政治資金管理団体
           </TabsTrigger>
         </TabsList>
 
@@ -320,6 +371,14 @@ export default function PoliticalDataPage() {
             title="政治資金団体一覧"
             apiPath={apiPaths.politicalFundGroups}
             columns={politicalFundGroupColumns}
+            externalSearchTerm={searchTerm}
+          />
+        </TabsContent>
+        <TabsContent value="fundManagementOrganizations" className="mt-4">
+          <DataTable
+            title="政治資金管理団体一覧"
+            apiPath={apiPaths.fundManagementOrganizations}
+            columns={fundManagementOrganizationColumns}
             externalSearchTerm={searchTerm}
           />
         </TabsContent>
