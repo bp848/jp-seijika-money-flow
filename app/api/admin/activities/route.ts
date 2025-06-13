@@ -13,14 +13,6 @@ export async function GET() {
       .limit(10)
 
     if (error) throw error
-    if (!logs) {
-      // logsがnullまたはundefinedの場合のフォールバック
-      return NextResponse.json({
-        success: true,
-        activities: [],
-        timestamp: new Date().toISOString(),
-      })
-    }
 
     // アクティビティに変換
     const activities = logs.map((log) => {
@@ -50,13 +42,14 @@ export async function GET() {
       }
 
       // アクションテキストを生成
-      let action = log.message || "ログメッセージなし" // log.messageがnull/undefinedの場合のデフォルトメッセージ
+      const messageContent = log.message || "詳細不明" // Default if message is null/undefined
+      let action = messageContent
       if (log.component === "pdf-upload") {
-        action = `PDFアップロード: ${log.message || "詳細不明"}`
+        action = `PDFアップロード: ${messageContent}`
       } else if (log.component === "pdf-ocr") {
-        action = `OCR処理: ${log.message || "詳細不明"}`
+        action = `OCR処理: ${messageContent}`
       } else if (log.component === "ai-chat") {
-        action = `AIチャット: ${log.message || "詳細不明"}`
+        action = `AIチャット: ${messageContent}`
       }
 
       return {
