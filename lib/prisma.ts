@@ -1,13 +1,19 @@
-import { supabase } from "./supabase-client"
+import { PrismaClient } from "@prisma/client"
 
-/**
- * This is a workaround to satisfy imports expecting a 'prisma' default export.
- * Be aware that this exports a Supabase client instance, not a Prisma client.
- *
- * If your code relies on Prisma-specific methods, you will encounter runtime errors.
- * You should refactor the code that imports 'prisma' to use Supabase client syntax
- * or implement a proper Prisma setup if Prisma is indeed required.
- */
-const prisma = supabase
+let prisma: PrismaClient
+
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
+}
+
+if (process.env.NODE_ENV === "production") {
+  prisma = new PrismaClient()
+} else {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient()
+  }
+  prisma = global.prisma
+}
 
 export default prisma
