@@ -253,13 +253,13 @@ model PdfDocument {
   year                    Int?
   party_id                Int?
   politician_id           Int?
-  political_organization_id String?
+
   political_party PoliticalParty? @relation(fields: [party_id], references: [id], map: "fk_pdf_documents_party_id")
   politician      Politician?     @relation(fields: [politician_id], references: [id], map: "fk_pdf_documents_politician_id")
-  political_organization    PoliticalOrganization? @relation(fields: [political_organization_id], references: [report_id], name: "PdfDocumentToPoliticalOrganization")
   document_embeddings DocumentEmbedding[]
   fund_flows          FundFlow[]
   processing_jobs     ProcessingJob[]
+
 
   @@map("pdf_documents")
 }
@@ -313,7 +313,6 @@ model PoliticalOrganization {
   expenditure_details    ExpenditureDetail[]
   financial_summaries    FinancialSummary[]
   revenue_details        RevenueDetail[]
-  pdf_documents          PdfDocument[] @relation("PdfDocumentToPoliticalOrganization")
 
   @@map("political_organizations")
 }
