@@ -1,18 +1,29 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import dynamic from "next/dynamic" // Import next/dynamic
 import { TrendingUp, TrendingDown, Scale, ListFilter, Share2 } from "lucide-react"
-import { SummaryStatCard } from "@/app/flow/components/summary-stat-card"
-import { TransactionsDataTable } from "@/app/flow/components/transactions-data-table"
-import { columns as defaultTransactionColumns, type DisplayTransaction } from "@/app/flow/components/columns"
+import { SummaryStatCard } from "@/app/flow/components/summary-stat-card" // Adjusted path if necessary
+import { TransactionsDataTable } from "@/app/flow/components/transactions-data-table" // Adjusted path if necessary
+import { columns as defaultTransactionColumns, type DisplayTransaction } from "@/app/flow/components/columns" // Adjusted path if necessary
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import type { DateRange } from "react-day-picker"
 import { subDays } from "date-fns"
-import { FlowSankeyChart, type SankeyData } from "@/app/flow/components/flow-sankey-chart" // Import SankeyChart and its data type
+// import { FlowSankeyChart, type SankeyData } from "@/app/flow/components/flow-sankey-chart" // Original static import
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { ColumnDef } from "@tanstack/react-table"
+import type { SankeyData } from "@/app/flow/components/flow-sankey-chart" // Import type separately
+
+// Dynamically import the FlowSankeyChart component with SSR disabled
+const FlowSankeyChart = dynamic(
+  () => import("@/app/flow/components/flow-sankey-chart").then((mod) => mod.FlowSankeyChart),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="w-full h-[500px]" />, // Provide a loading skeleton
+  },
+)
 
 interface CashFlowSummary {
   totalIncome: number
@@ -22,33 +33,19 @@ interface CashFlowSummary {
 }
 
 interface CashFlowPageData {
-  // Renamed from CashFlowData to avoid conflict
   summary: CashFlowSummary
   transactions: DisplayTransaction[]
   sankeyData: SankeyData
 }
 
-// Extend DisplayTransaction for cash flow page if needed, or adjust columns
-const cashFlowTransactionColumns: ColumnDef<DisplayTransaction>[] = [
-  ...defaultTransactionColumns,
-  // Add or modify columns specific to cash flow if necessary
-  // For example, to show 'category' or 'description' if they exist on DisplayTransaction
-  // {
-  //   accessorKey: "category",
-  //   header: "カテゴリ",
-  // },
-  // {
-  //   accessorKey: "description",
-  //   header: "摘要",
-  // },
-]
+const cashFlowTransactionColumns: ColumnDef<DisplayTransaction>[] = [...defaultTransactionColumns]
 
 export default function CashFlowPage() {
   const [data, setData] = useState<CashFlowPageData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 365 * 2), // Default to 2 years for more data
+    from: subDays(new Date(), 365 * 2),
     to: new Date(),
   })
 
@@ -100,11 +97,7 @@ export default function CashFlowPage() {
               <label htmlFor="date-range" className="block text-sm font-medium text-muted-foreground mb-1">
                 期間選択
               </label>
-              <DateRangePicker
-                range={dateRange}
-                onRangeChange={setDateRange}
-                className="w-full max-w-xs" // Added className for styling
-              />
+              <DateRangePicker range={dateRange} onRangeChange={setDateRange} className="w-full max-w-xs" />
             </div>
           </div>
         </CardContent>
@@ -117,8 +110,8 @@ export default function CashFlowPage() {
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
           </div>
-          <Skeleton className="h-[500px] w-full" /> {/* Placeholder for Sankey */}
-          <Skeleton className="h-96 w-full" /> {/* Placeholder for Table */}
+          <Skeleton className="h-[500px] w-full" />
+          <Skeleton className="h-96 w-full" />
         </div>
       )}
 
