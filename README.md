@@ -86,7 +86,7 @@ I'm now reviewing the comment on the `recipients` table. Next, I'll add a commen
 
 はい、承知いたしました。以下に、指定されたすべてのCREATE TABLE文に日本語のコメントを追加したスキーマ定義を記載します。
 
-```sql
+\`\`\`sql
 -- WARNING: This schema is for context only and is not meant to be run.
 -- 警告: このスキーマは文脈理解のためだけのものであり、実行を意図したものではありません。
 -- Table order and constraints may not be valid for execution.
@@ -516,7 +516,7 @@ CREATE TABLE public.transactions (
  CONSTRAINT transactions_target_entity_id_fkey FOREIGN KEY (target_entity_id) REFERENCES public.entities(id), -- 外部キー制約
  CONSTRAINT transactions_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(id) -- 外部キー制約
 );
-```
+\`\`\`
 ---
 
 # PDF処理システム仕様書
@@ -669,13 +669,13 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
 - **リクエスト**: `FormData` (`file`: アップロードするPDFファイル)
 - **レスポンス (成功時)**: `201 Created`
 
-```json
+\`\`\`json
 {
   "success": true,
   "document": { /* PdfDocumentオブジェクト */ },
   "message": "ファイルが正常にアップロードされました"
 }
-```
+\`\`\`
 
 
 - **処理内容**:
@@ -704,7 +704,7 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
 
 - **レスポンス (成功時)**: `200 OK`
 
-```json
+\`\`\`json
 {
   "documents": [ /* PdfDocumentオブジェクトの配列 */ ],
   "pagination": {
@@ -714,7 +714,7 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
     "totalPages": 10
   }
 }
-```
+\`\`\`
 
 
 - **処理内容**: `PdfDocument`テーブルから条件に合うドキュメントをページネーション付きで取得。
@@ -725,16 +725,16 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
 - **エンドポイント**: `POST /pdf-manager/documents/index`
 - **リクエストボディ**:
 
-```json
+\`\`\`json
 {
   "documentIds": ["uuid1", "uuid2", ...]
 }
-```
+\`\`\`
 
 
 - **レスポンス (成功時)**: `200 OK`
 
-```json
+\`\`\`json
 {
   "success": true,
   "results": [
@@ -743,7 +743,7 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
   ],
   "message": "N件のドキュメントのインデックス処理リクエストを受け付けました。"
 }
-```
+\`\`\`
 
 
 - **処理内容**:
@@ -765,12 +765,12 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
 - **エンドポイント**: `POST /pdf-manager/chat`
 - **リクエストボディ**:
 
-```json
+\`\`\`json
 {
   "messages": [ /* AI SDK CoreMessageオブジェクトの配列 */ ],
   "sessionId": "optional-session-uuid"
 }
-```
+\`\`\`
 
 
 - **レスポンス (成功時)**: AI SDK `StreamingTextResponse`
@@ -792,13 +792,13 @@ Groqによる構造化解析結果を格納するためのテーブル群（`Ass
 - **認証**: `Authorization: Bearer ${CRON_SECRET}` ヘッダーが必要。
 - **レスポンス (成功時)**: `200 OK`
 
-```json
+\`\`\`json
 {
   "success": true,
   "results": [ /* 各ドキュメントの処理結果オブジェクトの配列 */ ]
   // または "message": "No documents to process."
 }
-```
+\`\`\`
 
 
 - **処理内容**:
