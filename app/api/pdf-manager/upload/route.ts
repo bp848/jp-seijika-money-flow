@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         file_size: file.size,
         party_name: partyNameFromFileName,
         region: regionFromFileName,
-        status: "pending_upload",
+        status: "pending",
       },
     })
 

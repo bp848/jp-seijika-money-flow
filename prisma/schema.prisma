@@ -78,7 +78,7 @@ model DietMember {
 model DocumentEmbedding {
   id                 String    @id @default(uuid())
   document_id        String?
-  embedding_vector   Json      @db.JsonB // pgvectorを使用する場合は Unsupported("vector") に変更検討
+  embedding_vector   Json      @db.JsonB
   chunk_index        Int?      @default(0)
   chunk_text         String?
   created_at         DateTime? @default(now()) @db.Timestamptz
@@ -172,7 +172,7 @@ model FundFlow {
 
 model FundManagementOrganization {
   id                BigInt    @id @default(autoincrement())
-  politician_id     Int // BigIntからIntに変更
+  politician_id     BigInt
   organization_name String
   office_type       String
   report_year       Int
@@ -181,9 +181,9 @@ model FundManagementOrganization {
   is_active         Boolean   @default(true)
   created_at        DateTime  @default(now()) @db.Timestamptz
   updated_at        DateTime  @default(now()) @db.Timestamptz @updatedAt
-  total_income      Decimal?  // NumericからDecimalに変更
-  total_expenditure Decimal?  // NumericからDecimalに変更
-  net_balance       Decimal?  // NumericからDecimalに変更
+  total_income      Decimal?  @db.Numeric
+  total_expenditure Decimal?  @db.Numeric
+  net_balance       Decimal?  @db.Numeric
 
   politician Politician @relation(fields: [politician_id], references: [id], map: "fk_politician")
 
@@ -223,9 +223,9 @@ model PartyBranch {
   branch_address      String?
   registered_on       DateTime? @db.Date
   created_at          DateTime? @default(now())
-  total_income        Decimal?  @default(0) // NumericからDecimalに変更
-  total_expenditure   Decimal?  @default(0) // NumericからDecimalに変更
-  net_balance         Decimal?  @default(0) // NumericからDecimalに変更
+  total_income        Decimal?  @default(0) @db.Numeric
+  total_expenditure   Decimal?  @default(0) @db.Numeric
+  net_balance         Decimal?  @default(0) @db.Numeric
 
   political_party PoliticalParty? @relation(fields: [party_id], references: [id])
   politicians     Politician[]
@@ -236,7 +236,7 @@ model PartyBranch {
 model PdfDocument {
   id                      String    @id @default(uuid())
   file_name               String
-  blob_url                String    // @unique を削除
+  blob_url                String
   upload_datetime         DateTime? @default(now()) @db.Timestamptz
   party_name              String?   @default("不明")
   region                  String?   @default("不明")
@@ -253,13 +253,13 @@ model PdfDocument {
   year                    Int?
   party_id                Int?
   politician_id           Int?
-  political_organization_id String?
+
   political_party PoliticalParty? @relation(fields: [party_id], references: [id], map: "fk_pdf_documents_party_id")
   politician      Politician?     @relation(fields: [politician_id], references: [id], map: "fk_pdf_documents_politician_id")
-  political_organization    PoliticalOrganization? @relation(fields: [political_organization_id], references: [report_id], name: "PdfDocumentToPoliticalOrganization")
   document_embeddings DocumentEmbedding[]
   fund_flows          FundFlow[]
   processing_jobs     ProcessingJob[]
+
 
   @@map("pdf_documents")
 }
@@ -273,9 +273,9 @@ model PoliticalFund {
   address             String?
   registered_on       DateTime? @db.Date
   created_at          DateTime? @default(now())
-  total_income        Decimal?  @default(0) // NumericからDecimalに変更
-  total_expenditure   Decimal?  @default(0) // NumericからDecimalに変更
-  net_balance         Decimal?  @default(0) // NumericからDecimalに変更
+  total_income        Decimal?  @default(0) @db.Numeric
+  total_expenditure   Decimal?  @default(0) @db.Numeric
+  net_balance         Decimal?  @default(0) @db.Numeric
   representative_id   Int?
 
   politician                    Politician?                  @relation(fields: [representative_id], references: [id], map: "fk_politician")
@@ -305,7 +305,7 @@ model PoliticalOrganization {
   representative_name    String?
   accountant_name        String?
   report_year            Int?
-  raw_ocr_text           String    // String? から String に変更
+  raw_ocr_text           String?
   created_at             DateTime  @default(now()) @db.Timestamptz
   updated_at             DateTime  @default(now()) @db.Timestamptz @updatedAt
   asset_details          AssetDetail[]
@@ -313,9 +313,6 @@ model PoliticalOrganization {
   expenditure_details    ExpenditureDetail[]
   financial_summaries    FinancialSummary[]
   revenue_details        RevenueDetail[]
-  pdf_documents          PdfDocument[] @relation("PdfDocumentToPoliticalOrganization")
-  blob_url               String    // String? から String に変更
-  content_hash           String    // String? から String に変更
 
   @@map("political_organizations")
 }
@@ -328,9 +325,9 @@ model PoliticalParty {
   headquarters_address String?
   established_on       DateTime?  @db.Date
   created_at           DateTime?  @default(now())
-  total_income         Decimal?   @default(0) // NumericからDecimalに変更
-  total_expenditure    Decimal?   @default(0) // NumericからDecimalに変更
-  net_balance          Decimal?   @default(0) // NumericからDecimalに変更
+  total_income         Decimal?   @default(0) @db.Numeric
+  total_expenditure    Decimal?   @default(0) @db.Numeric
+  net_balance          Decimal?   @default(0) @db.Numeric
   diet_members         DietMember[]
   party_branches       PartyBranch[]
   pdf_documents        PdfDocument[]
@@ -340,7 +337,7 @@ model PoliticalParty {
 }
 
 model Politician {
-  id                  Int       @id @default(autoincrement()) // 型は Int のまま
+  id                  Int       @id @default(autoincrement())
   name                String
   party_id            Int?
   branch_id           Int?
@@ -442,7 +439,7 @@ model Transaction {
   id                 Int       @id @default(autoincrement())
   source_entity_id   Int?
   target_entity_id   Int?
-  amount             Decimal?  // NumericからDecimalに変更
+  amount             Decimal?  @db.Numeric
   transaction_type   String?
   occurred_on        DateTime? @db.Date
   created_at         DateTime? @default(now())
@@ -461,7 +458,7 @@ enum ChatMessageType {
 enum PdfDocumentStatus {
   pending_upload
   duplicate
-  processing_pipeline
+  processing_pipeline // New status for the batch job
   text_extraction_processing
   text_extraction_completed
   text_extraction_failed

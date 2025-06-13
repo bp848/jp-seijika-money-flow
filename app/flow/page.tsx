@@ -1,19 +1,14 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import dynamic from "next/dynamic"
 import { ArrowRightLeft, Landmark, Users } from "lucide-react"
 import { SummaryStatCard } from "./components/summary-stat-card"
+import { FlowSankeyChart } from "./components/flow-sankey-chart"
 import { TransactionsDataTable } from "./components/transactions-data-table"
 import { columns, type DisplayTransaction } from "./components/columns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
-
-const FlowSankeyChart = dynamic(() => import("./components/flow-sankey-chart").then((mod) => mod.FlowSankeyChart), {
-  ssr: false,
-  loading: () => <Skeleton className="w-full h-[800px]" />,
-})
 
 interface SankeyNode {
   id: number
@@ -157,7 +152,11 @@ export default function FlowPage() {
               />
               <p className="text-xs text-muted-foreground mt-1">スライダーを調整後、データが再読み込みされます。</p>
             </div>
-            <FlowSankeyChart nodes={data.sankeyNodes} links={data.sankeyLinks} />
+            {isLoading ? (
+              <Skeleton className="w-full h-[800px]" />
+            ) : (
+              <FlowSankeyChart nodes={data.sankeyNodes} links={data.sankeyLinks} />
+            )}
           </section>
         </div>
       )}
