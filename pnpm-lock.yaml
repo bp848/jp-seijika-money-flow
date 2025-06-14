@@ -180,8 +180,8 @@ importers:
         specifier: ^19
         version: 19.0.0(react@19.0.0)
       react-force-graph-2d:
-        specifier: latest
-        version: 1.27.1(react@19.0.0)
+        specifier: ^1.25.4
+        version: 1.25.4(react@19.0.0)
       react-hook-form:
         specifier: ^7.54.1
         version: 7.54.1(react@19.0.0)
@@ -3362,8 +3362,8 @@ packages:
     peerDependencies:
       react: ^19.0.0
 
-  react-force-graph-2d@1.27.1:
-    resolution: {integrity: sha512-/b1k+HbW9QCzGILJibyzN2PVZdDWTFuEylqcJGkUTBs0uLcK0h2LgOUuVU+GpRGpuXmj9sBAt43zz+PTETFHGg==}
+  react-force-graph-2d@1.25.4:
+    resolution: {integrity: sha512-Y1xwa79PHVZUedfa/TO+Cboq2hIc1flA1z4o1oraOu6qMS0r421vNpfjWhJPR6qJonNme3tzeVt5boEA7Ue8sg==}
     engines: {node: '>=12'}
     peerDependencies:
       react: '*'
@@ -7248,7 +7248,7 @@ snapshots:
       react: 19.0.0
       scheduler: 0.25.0
 
-  react-force-graph-2d@1.27.1(react@19.0.0):
+  react-force-graph-2d@1.25.4(react@19.0.0):
     dependencies:
       force-graph: 1.49.6
       prop-types: 15.8.1

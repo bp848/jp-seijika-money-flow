@@ -66,7 +66,7 @@
     "react": "^19",
     "react-day-picker": "latest",
     "react-dom": "^19",
-    "react-force-graph-2d": "latest",
+    "react-force-graph-2d": "^1.25.4",
     "react-hook-form": "^7.54.1",
     "react-plotly.js": "latest",
     "react-resizable-panels": "^2.1.7",
